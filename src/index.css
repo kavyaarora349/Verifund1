@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg-base: #0B0F1A;
+  --color-bg-surface: #131929;
+  --color-bg-card: #1C2437;
+  --color-bg-hover: #232D42;
+  --color-border: #2A3347;
+  --color-border-focus: #3B82F6;
+
+  --color-accent: #2563EB;
+  --color-accent-hover: #1D4ED8;
+
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #38BDF8;
+
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #475569;
+  --color-text-hash: #64748B;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-base text-text-primary font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-bg-card border border-border rounded-xl;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-text-secondary hover:text-text-primary hover:bg-bg-hover;
+  }
+
+  .sidebar-link-active {
+    @apply bg-accent text-white hover:bg-accent-hover;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg-base;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full hover:bg-text-muted;
+}

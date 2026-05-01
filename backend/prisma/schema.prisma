@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  AUDITOR
+  FINANCE_OFFICER
+  DEPT_HEAD
+  PUBLIC
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMED
+  FLAGGED
+  REJECTED
+}
+
+enum FlagSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  SIGNED
+  REJECTED
+}
+
+enum AllocationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          Role
+  department    String?
+  ministry      String?
+  walletAddress String?        @unique
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  initiatedTxs  Transaction[]  @relation("Initiator")
+  approvals     Approval[]
+  allocationRequests AllocationRequest[] @relation("AllocationRequester")
+  allocationApprovals AllocationRequestApproval[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+}
+
+model Ministry {
+  id              String       @id @default(uuid())
+  name            String       @unique
+  code            String       @unique
+  allocatedAmount BigInt
+  createdAt       DateTime     @default(now())
+  departments     Department[]
+}
+
+model Department {
+  id              String        @id @default(uuid())
+  name            String
+  code            String        @unique
+  ministryId      String
+  ministry        Ministry      @relation(fields: [ministryId], references: [id])
+  allocatedAmount BigInt
+  createdAt       DateTime      @default(now())
+  transactions    Transaction[]
+  budgetAlerts    BudgetAlert[]
+}
+
+model Transaction {
+  id               String      @id @default(uuid())
+  fromName         String
+  fromWallet       String
+  toName           String
+  toWallet         String
+  toType           String
+  amount           BigInt
+  description      String?
+  departmentId     String
+  department       Department  @relation(fields: [departmentId], references: [id])
+  ministry         String
+  initiatedById    String
+  initiatedBy      User        @relation("Initiator", fields: [initiatedById], references: [id])
+  status           TxStatus    @default(PENDING)
+  blockchainTxHash String?     @unique
+  blockNumber      Int?
+  blockHash        String?
+  previousHash     String?
+  localHash        String?
+  onChainAt        DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  approvals        Approval[]
+  flags            Flag[]
+  auditLogs        AuditLog[]
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([fromWallet])
+  @@index([toWallet])
+}
+
+model Approval {
+  id              String         @id @default(uuid())
+  transactionId   String
+  transaction     Transaction    @relation(fields: [transactionId], references: [id])
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  role            Role
+  status          ApprovalStatus @default(PENDING)
+  signature       String?
+  signedAt        DateTime?
+  rejectionReason String?
+  createdAt       DateTime       @default(now())
+  @@unique([transactionId, userId])
+}
+
+model Flag {
+  id            String       @id @default(uuid())
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id])
+  reason        String
+  category      String
+  severity      FlagSeverity
+  aiScore       Int
+  isResolved    Boolean      @default(false)
+  resolvedById  String?
+  resolvedAt    DateTime?
+  resolution    String?
+  createdAt     DateTime     @default(now())
+
+  @@index([transactionId])
+  @@index([severity])
+  @@index([isResolved])
+}
+
+model Blacklist {
+  id            String   @id @default(uuid())
+  walletAddress String?  @unique
+  vendorName    String?
+  reason        String
+  addedById     String
+  createdAt     DateTime @default(now())
+}
+
+model BudgetAlert {
+  id          String     @id @default(uuid())
+  departmentId String
+  department  Department @relation(fields: [departmentId], references: [id])
+  thresholdPct Int
+  isTriggered Boolean    @default(false)
+  triggeredAt DateTime?
+  createdAt   DateTime   @default(now())
+}
+
+model AuditLog {
+  id            String       @id @default(uuid())
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id])
+  action        String
+  entity        String
+  entityId      String?
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime     @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model FraudRule {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isEnabled Boolean  @default(true)
+  config    Json
+  updatedAt DateTime @updatedAt
+}
+
+model AllocationRequest {
+  id                        String                  @id @default(uuid())
+  requestedById             String
+  requestedBy               User                    @relation("AllocationRequester", fields: [requestedById], references: [id])
+  beneficiaryWalletAddress  String
+  requestedAlgoAmount       BigInt
+  projectReason             String
+  ministryCode              String
+  ministryName              String
+  ministryAllocatedAmount   BigInt
+  departmentCode            String
+  departmentName            String
+  departmentAllocatedAmount BigInt
+  payoutTxId                String?
+  payoutRound               Int?
+  payoutAt                  DateTime?
+  status                    AllocationRequestStatus @default(PENDING)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  approvals                 AllocationRequestApproval[]
+
+  @@index([requestedById])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AllocationRequestApproval {
+  id                String          @id @default(uuid())
+  allocationRequestId String
+  allocationRequest AllocationRequest @relation(fields: [allocationRequestId], references: [id])
+  approverId        String
+  approver          User            @relation(fields: [approverId], references: [id])
+  role              Role
+  status            ApprovalStatus  @default(PENDING)
+  signature         String?
+  signedAt          DateTime?
+  rejectionReason   String?
+  createdAt         DateTime        @default(now())
+
+  @@unique([allocationRequestId, approverId])
+  @@index([approverId])
+  @@index([status])
+}
