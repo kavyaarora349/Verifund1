@@ -78,6 +78,18 @@ export const Card: React.FC<{ children: React.ReactNode; className?: string; tit
   </div>
 );
 
+export const PageLoader: React.FC<{ label?: string }> = ({ label = "Loading…" }) => (
+  <div className="flex min-h-[40vh] w-full items-center justify-center">
+    <div className="flex flex-col items-center gap-3 text-text-muted text-sm">
+      <span
+        className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin"
+        aria-hidden
+      />
+      <span>{label}</span>
+    </div>
+  </div>
+);
+
 export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }> = ({ children, className, variant = 'primary', ...props }) => {
   const variants = {
     primary: 'bg-accent hover:bg-accent-hover text-white',
@@ -92,25 +104,5 @@ export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { 
     >
       {children}
     </button>
-  );
-};
-
-export const PageLoader: React.FC<{ label?: string }> = ({ label = 'Loading data...' }) => {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 text-text-muted">
-        <span className="relative flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent/70"></span>
-          <span className="relative inline-flex h-3 w-3 rounded-full bg-accent"></span>
-        </span>
-        <p className="text-sm font-medium">{label}</p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="h-24 rounded-xl border border-border bg-bg-card animate-pulse"></div>
-        <div className="h-24 rounded-xl border border-border bg-bg-card animate-pulse"></div>
-        <div className="h-24 rounded-xl border border-border bg-bg-card animate-pulse"></div>
-      </div>
-      <div className="h-64 rounded-xl border border-border bg-bg-card animate-pulse"></div>
-    </div>
   );
 };
