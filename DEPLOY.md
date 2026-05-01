@@ -1,64 +1,79 @@
-# Deploy VeriFund on Vercel (full stack)
+# Deploy VeriFund (two sites)
 
-One project deploys **static UI + Express API** together:
+**Site 1 — API** (long‑running Node + Prisma + Redis), e.g. **Render**.  
+**Site 2 — UI** (static Vite build), e.g. **Vercel**.
 
-- `dist/` is served as static assets (JS/CSS).
-- Anything that isn’t a static file is rewritten to a **single serverless function** that runs your existing Express `app` (`api/index.ts` + `serverless-http`).
-- The UI calls **`/api/v1`** on the **same hostname** (no `VITE_API_BASE_URL` required).
+The browser talks to the API using **`VITE_API_BASE_URL`** (set at **build** time on Vercel).
 
-## Limitations vs a long‑running server
+---
 
-- **Socket.IO** is not running (only `server.ts` attaches it). Live notification sockets won’t connect; the rest of the app still works.
-- **BullMQ worker** doesn’t run on serverless. Set **`RUN_QUEUE_WORKER=false`** so fraud checks run **inline** (already supported).
-- **Cold starts** on the free tier can add a few seconds on the first request after idle.
+## A. API (Render)
 
-## 1. Prepare Redis
+1. Create a **Web Service** → **Docker**.
+2. **Dockerfile path**: `backend/Dockerfile`  
+   **Docker context**: `backend`
+3. **Health check path**: `/healthz`
+4. **Environment variables**:
 
-Use **[Upstash](https://upstash.com)** (or similar) and copy the **`rediss://`** URL → **`REDIS_URL`** in Vercel.
-
-## 2. Import the repo on Vercel
-
-1. [vercel.com](https://vercel.com) → **Add New** → **Project** → import this repository.
-2. Framework / settings are driven by **`vercel.json`** (`buildCommand`, `outputDirectory`, `rewrites`).
-3. **Install Command**: `npm ci && cd backend && npm ci` (already in `vercel.json`).
-
-## 3. Environment variables (Production — also enable for “Build” where noted)
-
-| Variable | Example / notes |
-|----------|------------------|
-| `DATABASE_URL` | Supabase **pooler** URL |
-| `DIRECT_URL` | Supabase **direct** URL (Prisma migrations in build) |
+| Variable | Notes |
+|----------|--------|
+| `DATABASE_URL` | Supabase pooler URL |
+| `DIRECT_URL` | Supabase direct URL (Prisma) |
 | `REDIS_URL` | Upstash `rediss://…` |
-| `JWT_SECRET` | ≥16 random chars |
-| `JWT_REFRESH_SECRET` | ≥16 random chars |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Each ≥16 chars |
 | `NODE_ENV` | `production` |
-| `RUN_QUEUE_WORKER` | `false` |
-| `SOCKET_CORS_ORIGINS` | `*` or your exact site URL |
+| `RUN_QUEUE_WORKER` | `true` if Redis is solid; else `false` for inline fraud |
+| `SOCKET_CORS_ORIGINS` | Your Vercel origin, e.g. `https://your-app.vercel.app` (or `*` while testing) |
 
-Important: **`DATABASE_URL`** and **`DIRECT_URL`** must be available at **build time** too (Prisma runs `migrate deploy` during `vercel-build`). In Vercel → Project → Settings → Environment Variables, edit each var and tick **Production** for **Build** as well as **Runtime**.
+5. Deploy and copy the service URL, e.g. `https://verifund-api.onrender.com`.
 
-Optional: **`VITE_API_BASE_URL`** — only if you split frontend and API later; same‑host deploy leaves it unset.
+Your API base path for the frontend is:
 
-## 4. Deploy
+`https://YOUR_API_HOST/api/v1`
 
-Push to `main` or click **Deploy**. First build runs:
+---
 
-`backend`: `prisma migrate deploy` → `prisma generate` → `tsc`  
-root: `vite build`
+## B. UI (Vercel)
 
-## 5. Smoke tests
+1. Import this repo — **Root Directory**: `./` (repo root).
+2. Settings should match **`vercel.json`**: install `npm ci`, build `npm run build`, output **`dist`**.
+3. **Environment variables** (Production — enable for **Build**):
 
-- Open `https://YOUR_PROJECT.vercel.app/healthz` → `{"status":"ok"}`
-- Open the site root → login page → sign in (hits `/api/v1/...` on the same domain).
+| Variable | Example |
+|----------|---------|
+| `VITE_API_BASE_URL` | `https://YOUR_API_HOST.onrender.com/api/v1` |
 
-## 6. Seed (optional)
+Use the **exact** URL from step A + **`/api/v1`**.
 
-Run once against prod DB (local shell with prod `DATABASE_URL`):
+4. Deploy / redeploy so the env var is baked into the bundle.
+
+`.vercelignore` skips `api/` and `backend/` — only the frontend is uploaded (API runs on Render).
+
+---
+
+## Smoke tests
+
+- `GET https://YOUR_API_HOST/healthz` → `{"status":"ok"}`
+- Open the Vercel URL → login should call your Render API (check browser Network tab).
+
+---
+
+## Optional: Render Blueprint
+
+See **`render.yaml`** for a template Web Service (set secrets in the dashboard).
+
+---
+
+## Seed (optional)
+
+With prod `DATABASE_URL` / `DATABASE_URL` from Render env:
 
 ```bash
 cd backend && npx prisma db seed
 ```
 
-## Alternative: API on Render + UI on Vercel
+---
 
-If you outgrow serverless (heavy WebSockets, background workers), split the API back out (e.g. `render.yaml` + Docker in `backend/`) and set **`VITE_API_BASE_URL`** to the API origin.
+## Legacy: single‑site Vercel (Express + UI)
+
+The repo may still contain **`api/index.ts`** for an experimental all‑in‑one Vercel deploy; **two‑site setup ignores it** via `.vercelignore`.
