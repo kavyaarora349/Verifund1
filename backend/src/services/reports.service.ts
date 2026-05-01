@@ -23,13 +23,15 @@ async function computeDashboardStats() {
       prisma.flag.groupBy({
         by: ["category"],
         where: { isResolved: false },
+        orderBy: { category: "asc" },
         _count: { _all: true }
       })
     ]);
 
   const flagsByCategory: Record<string, number> = {};
   for (const f of openFlagCategories) {
-    flagsByCategory[f.category] = f._count._all;
+    const c = f._count && typeof f._count === "object" && "_all" in f._count ? f._count._all : 0;
+    flagsByCategory[f.category] = c ?? 0;
   }
 
   const latestConfirmed = await prisma.transaction.findFirst({

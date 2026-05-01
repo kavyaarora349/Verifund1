@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import type { Role } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
@@ -35,7 +36,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       req.user = {
         id: payload.userId,
         email: payload.email,
-        role: payload.role,
+        role: payload.role as Role,
         department: payload.department ?? null,
         ministry: payload.ministry ?? null,
         name: payload.name,

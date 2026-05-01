@@ -73,11 +73,13 @@ async function computeFlagStats() {
   const [byCategoryRows, openBySeverityRows] = await prisma.$transaction([
     prisma.flag.groupBy({
       by: ["category"],
+      orderBy: { category: "asc" },
       _count: { _all: true }
     }),
     prisma.flag.groupBy({
       by: ["severity"],
       where: { isResolved: false },
+      orderBy: { severity: "asc" },
       _count: { _all: true }
     })
   ]);
@@ -86,10 +88,12 @@ async function computeFlagStats() {
   const openBySeverity: Record<string, number> = {};
 
   for (const row of byCategoryRows) {
-    byCategory[row.category] = row._count._all;
+    const c = row._count && typeof row._count === "object" && "_all" in row._count ? row._count._all : 0;
+    byCategory[row.category] = c ?? 0;
   }
   for (const row of openBySeverityRows) {
-    openBySeverity[row.severity] = row._count._all;
+    const c = row._count && typeof row._count === "object" && "_all" in row._count ? row._count._all : 0;
+    openBySeverity[row.severity] = c ?? 0;
   }
 
   return { byCategory, openBySeverity };
