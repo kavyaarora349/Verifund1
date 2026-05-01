@@ -2,6 +2,21 @@ import { Redis, type RedisOptions } from "ioredis";
 import { URL } from "node:url";
 import { env } from "./env.js";
 
+/** Upstash/RConsole sometimes pastes `redis-cli --tls -u redis://...` — only the URL is valid for `new URL()`. */
+export function normalizeRedisUrl(raw: string): string {
+  const s = raw.trim();
+  const lower = s.toLowerCase();
+  const pick = (proto: "rediss://" | "redis://") => {
+    const i = lower.indexOf(proto);
+    if (i < 0) return null;
+    let url = s.slice(i);
+    const space = url.search(/\s/);
+    if (space >= 0) url = url.slice(0, space);
+    return url.replace(/^['"]|['"]$/g, "");
+  };
+  return pick("rediss://") ?? pick("redis://") ?? s;
+}
+
 function optionsFromUrl(urlStr: string): RedisOptions {
   const u = new URL(urlStr);
   const dbPath = u.pathname && u.pathname !== "/" ? u.pathname.slice(1) : "0";
@@ -18,7 +33,7 @@ function optionsFromUrl(urlStr: string): RedisOptions {
 }
 
 /** BullMQ + shared commands use the same option bag (separate TCP connections). */
-export const redisConnection: RedisOptions = optionsFromUrl(env.REDIS_URL);
+export const redisConnection: RedisOptions = optionsFromUrl(normalizeRedisUrl(env.REDIS_URL));
 
 export const redisClient = new Redis(redisConnection);
 redisClient.on("error", () => {

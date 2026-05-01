@@ -66,7 +66,7 @@ Add **every** row below (keys must match exactly — the Node app reads these na
 |-----|--------|
 | `DATABASE_URL` | Supabase **connection pooling** URL (often contains `pooler` / `6543` or similar). |
 | `DIRECT_URL` | Supabase **direct** Postgres URL (session/direct — used heavily by Prisma migrate). |
-| `REDIS_URL` | Full URL from Upstash, e.g. `rediss://default:...@....upstash.io:6379` |
+| `REDIS_URL` | **Only** the URL from Upstash (starts with `rediss://` or `redis://`). Do **not** paste the whole `redis-cli --tls -u …` line. |
 | `JWT_SECRET` | Random string, ≥16 chars |
 | `JWT_REFRESH_SECRET` | Different random string, ≥16 chars |
 | `NODE_ENV` | `production` |
