@@ -1,6 +1,7 @@
 import { Role } from "../types";
 import { useAuthStore } from "../store/authStore";
 
+/** Local dev: UI on :3000 → API at localhost:4000. Override with `VITE_API_BASE_URL` if needed. */
 function resolveApiBase(): string {
   const envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (envBase) return envBase.replace(/\/+$/, "");
@@ -10,19 +11,7 @@ function resolveApiBase(): string {
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:4000/api/v1";
     }
-
-    const fallback = `${protocol}//${hostname}/api/v1`;
-    // UI on Vercel/Netlify + API on Render: requests must use VITE_API_BASE_URL — same-origin /api/v1 does not exist.
-    const staticHost =
-      hostname.endsWith(".vercel.app") ||
-      hostname.endsWith(".netlify.app") ||
-      hostname.endsWith(".cloudflarepages.dev");
-    if (import.meta.env.PROD && staticHost) {
-      console.error(
-        "[VeriFund] Set VITE_API_BASE_URL in your host (e.g. Vercel → Environment Variables) to your API root, e.g. https://YOUR-SERVICE.onrender.com/api/v1 — then Redeploy the frontend."
-      );
-    }
-    return fallback;
+    return `${protocol}//${hostname}/api/v1`;
   }
 
   return "http://localhost:4000/api/v1";

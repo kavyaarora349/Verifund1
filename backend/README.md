@@ -1,6 +1,6 @@
-# VeriFund Backend
+# VeriFund backend
 
-Production-oriented API for fund-flow tracking: PostgreSQL + Redis (rate limits + BullMQ fraud queue), JWT auth with persisted refresh tokens, approval workflow with ledger anchoring, Socket.IO alerts, and rule-based fraud detection.
+API for fund-flow tracking (local / self-hosted): PostgreSQL + Redis (rate limits + BullMQ fraud queue), JWT auth with persisted refresh tokens, approval workflow with ledger anchoring, Socket.IO alerts, and rule-based fraud detection.
 
 ## Prerequisites
 
@@ -21,13 +21,13 @@ Production-oriented API for fund-flow tracking: PostgreSQL + Redis (rate limits 
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@verifund.gov.in | Admin@123 | ADMIN |
-| auditor@verifund.gov.in | Audit@123 | AUDITOR |
-| finance@verifund.gov.in | Finance@123 | FINANCE_OFFICER |
-| depthead@verifund.gov.in | Dept@123 | DEPT_HEAD |
-| public@verifund.gov.in | Public@123 | PUBLIC |
+| admin@publedger.gov.in | Admin@123 | ADMIN |
+| auditor@publedger.gov.in | Audit@123 | AUDITOR |
+| finance@publedger.gov.in | Finance@123 | FINANCE_OFFICER |
+| depthead@publedger.gov.in | Dept@123 | DEPT_HEAD |
+| public@publedger.gov.in | Public@123 | PUBLIC |
 
-Change passwords before any real deployment.
+Change seeded passwords if you expose this beyond local dev.
 
 ## Docker
 

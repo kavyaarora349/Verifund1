@@ -1,20 +1,33 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# VeriFund
 
-# Run and deploy your AI Studio app
+React UI + Node API for local demo use.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/ad25dd4d-49f4-4513-906b-9c00e37f0cc7
+**Terminal 1 — API** (from repo root):
 
-## Run Locally
+```bash
+cd backend
+copy .env.example .env
+# Edit .env: DATABASE_URL, DIRECT_URL, REDIS_URL, JWT_*, etc.
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+API listens on **http://localhost:4000** (REST under `/api/v1`).
 
+**Terminal 2 — UI**:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000**. The UI calls **http://localhost:4000/api/v1** by default.
+
+Optional: create `.env` in the repo root with `GEMINI_API_KEY` if you use Gemini features from `vite.config`.
+
+To point the UI at another API base only, set **`VITE_API_BASE_URL`** (e.g. in `.env.local`) to that origin + `/api/v1`.
