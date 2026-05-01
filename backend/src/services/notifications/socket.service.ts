@@ -50,7 +50,8 @@ export function attachSocket(httpServer: HttpServer): Server {
 }
 
 export function emitToUser(userId: string, event: string, payload: unknown): void {
-  io?.to(`user:${userId}`).emit(event, serializeBigIntDeep(payload));
+  if (!io) return;
+  io.to(`user:${userId}`).emit(event, serializeBigIntDeep(payload));
 }
 
 export function emitFlagNew(payload: { flag: unknown; transaction: unknown }): void {

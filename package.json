@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "vercel-build": "cd backend && npx prisma migrate deploy && npx prisma generate && npm run build && cd .. && npm run build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -29,6 +30,7 @@
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.14.2",
     "recharts": "^3.8.1",
+    "serverless-http": "^3.2.0",
     "tailwind-merge": "^3.5.0",
     "vite": "^6.2.3",
     "zustand": "^5.0.12"

@@ -1,75 +1,64 @@
-# Deploy VeriFund (frontend + API)
+# Deploy VeriFund on Vercel (full stack)
 
-You deploy **two pieces**: the **API** (Docker / Node) and the **static UI** (Vite build). They talk over HTTPS using `VITE_API_BASE_URL`.
+One project deploys **static UI + Express API** together:
 
-## 1. Redis
+- `dist/` is served as static assets (JS/CSS).
+- Anything that isn’t a static file is rewritten to a **single serverless function** that runs your existing Express `app` (`api/index.ts` + `serverless-http`).
+- The UI calls **`/api/v1`** on the **same hostname** (no `VITE_API_BASE_URL` required).
 
-The API expects **`REDIS_URL`** (BullMQ fraud worker when `RUN_QUEUE_WORKER=true`).
+## Limitations vs a long‑running server
 
-- Easiest free tier: [Upstash Redis](https://upstash.com/) → create a database → copy the **rediss://** URL into `REDIS_URL`.
+- **Socket.IO** is not running (only `server.ts` attaches it). Live notification sockets won’t connect; the rest of the app still works.
+- **BullMQ worker** doesn’t run on serverless. Set **`RUN_QUEUE_WORKER=false`** so fraud checks run **inline** (already supported).
+- **Cold starts** on the free tier can add a few seconds on the first request after idle.
 
-## 2. PostgreSQL (Supabase)
+## 1. Prepare Redis
 
-Use your existing Supabase project:
+Use **[Upstash](https://upstash.com)** (or similar) and copy the **`rediss://`** URL → **`REDIS_URL`** in Vercel.
 
-- **`DATABASE_URL`** — pooler URL (often port `5432` / `6543` with `pgbouncer=true` if you use the pooler).
-- **`DIRECT_URL`** — non-pooler URL for Prisma migrations (`prisma migrate deploy` in Docker). Supabase dashboard lists both under *Database settings → Connection string*.
+## 2. Import the repo on Vercel
 
-If migrations fail on the pooler, point **`DIRECT_URL`** at the **direct** Postgres connection.
+1. [vercel.com](https://vercel.com) → **Add New** → **Project** → import this repository.
+2. Framework / settings are driven by **`vercel.json`** (`buildCommand`, `outputDirectory`, `rewrites`).
+3. **Install Command**: `npm ci && cd backend && npm ci` (already in `vercel.json`).
 
-## 3. API on Render
+## 3. Environment variables (Production — also enable for “Build” where noted)
 
-1. [Render](https://render.com) → **New** → **Blueprint** → connect this Git repo, or **Web Service** → **Docker**.
-2. **Root directory**: repository root (leave empty / default).
-3. **Dockerfile path**: `backend/Dockerfile`
-4. **Docker build context**: `backend`
-5. **Health check path**: `/healthz`
-6. Under **Environment**, add (from `backend/.env.example`):
-
-| Variable | Notes |
-|----------|--------|
-| `DATABASE_URL` | Supabase pooled |
-| `DIRECT_URL` | Supabase direct (migrations) |
+| Variable | Example / notes |
+|----------|------------------|
+| `DATABASE_URL` | Supabase **pooler** URL |
+| `DIRECT_URL` | Supabase **direct** URL (Prisma migrations in build) |
 | `REDIS_URL` | Upstash `rediss://…` |
-| `JWT_SECRET` | ≥16 chars, random |
-| `JWT_REFRESH_SECRET` | ≥16 chars, random |
+| `JWT_SECRET` | ≥16 random chars |
+| `JWT_REFRESH_SECRET` | ≥16 random chars |
 | `NODE_ENV` | `production` |
-| `RUN_QUEUE_WORKER` | `true` if Redis works; else `false` (worker off; fraud paths still assume Redis/BullMQ availability where used — prefer Redis) |
-| `SOCKET_CORS_ORIGINS` | Your Vercel URL, e.g. `https://your-app.vercel.app` or `*` for testing |
+| `RUN_QUEUE_WORKER` | `false` |
+| `SOCKET_CORS_ORIGINS` | `*` or your exact site URL |
 
-Render sets **`PORT`** automatically; the app already reads `process.env.PORT`.
+Important: **`DATABASE_URL`** and **`DIRECT_URL`** must be available at **build time** too (Prisma runs `migrate deploy` during `vercel-build`). In Vercel → Project → Settings → Environment Variables, edit each var and tick **Production** for **Build** as well as **Runtime**.
 
-After deploy, note the API URL, e.g. `https://verifund-api.onrender.com`.
+Optional: **`VITE_API_BASE_URL`** — only if you split frontend and API later; same‑host deploy leaves it unset.
 
-**Optional seed:** In Render Shell (or locally with prod `DATABASE_URL`):
+## 4. Deploy
+
+Push to `main` or click **Deploy**. First build runs:
+
+`backend`: `prisma migrate deploy` → `prisma generate` → `tsc`  
+root: `vite build`
+
+## 5. Smoke tests
+
+- Open `https://YOUR_PROJECT.vercel.app/healthz` → `{"status":"ok"}`
+- Open the site root → login page → sign in (hits `/api/v1/...` on the same domain).
+
+## 6. Seed (optional)
+
+Run once against prod DB (local shell with prod `DATABASE_URL`):
 
 ```bash
 cd backend && npx prisma db seed
 ```
 
-## 4. Frontend on Vercel
+## Alternative: API on Render + UI on Vercel
 
-1. [Vercel](https://vercel.com) → **Add New Project** → import this repo.
-2. **Framework preset**: Vite (or Other + settings below).
-3. **Build Command**: `npm run build`
-4. **Output Directory**: `dist`
-5. **Environment Variables** (Production):
-
-| Name | Value |
-|------|--------|
-| `VITE_API_BASE_URL` | `https://YOUR-RENDER-SERVICE.onrender.com/api/v1` |
-
-Redeploy after changing env vars (they are baked in at build time).
-
-`vercel.json` includes SPA rewrites so client-side routes work.
-
-## 5. Smoke test
-
-- Open `https://YOUR-API/healthz` → `{"status":"ok"}`
-- Open the Vercel site → login page loads → login hits the API URL you set.
-
-## Troubleshooting
-
-- **CORS**: API uses open `cors()`; if issues persist, check browser mixed content (HTTPS site → HTTP API).
-- **Sockets**: Set `SOCKET_CORS_ORIGINS` to your exact Vercel origin if live updates fail.
-- **Cold start**: Render free tier sleeps; first request can take ~30–60s.
+If you outgrow serverless (heavy WebSockets, background workers), split the API back out (e.g. `render.yaml` + Docker in `backend/`) and set **`VITE_API_BASE_URL`** to the API origin.

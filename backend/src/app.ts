@@ -1,3 +1,4 @@
+import path from "node:path";
 import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
@@ -38,5 +39,15 @@ app.use(`${p}/reports`, reportsRouter);
 app.use(`${p}/users`, usersRouter);
 app.use(`${p}/admin`, adminRouter);
 app.use(`${p}/public`, publicRouter);
+
+/** Vercel serverless: non-API GETs (no static file on CDN) are rewritten here — SPA fallback. */
+if (process.env.VERCEL) {
+  const distDir = path.join(process.cwd(), "dist");
+  app.use((req, res, next) => {
+    if (req.method !== "GET") return next();
+    if (req.path.startsWith(p) || req.path === "/healthz") return next();
+    res.sendFile(path.join(distDir, "index.html"), (err) => (err ? next(err) : undefined));
+  });
+}
 
 app.use(errorHandler);

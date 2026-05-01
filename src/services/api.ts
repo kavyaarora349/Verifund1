@@ -10,7 +10,8 @@ function resolveApiBase(): string {
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:4000/api/v1";
     }
-    return `${protocol}//${hostname}:4000/api/v1`;
+    // Same host as the UI (e.g. full-stack on Vercel) — no separate API port.
+    return `${protocol}//${hostname}/api/v1`;
   }
 
   return "http://localhost:4000/api/v1";
