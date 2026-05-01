@@ -28,6 +28,15 @@ app.get("/healthz", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+/** API-only host (e.g. Render) — not used when `VERCEL` serves the SPA from `/`. */
+if (!process.env.VERCEL) {
+  app.get("/", (_req, res) => {
+    res.type("text/plain").status(200).send(
+      `VeriFund API\nHealth: GET /healthz\nREST: ${env.API_PREFIX}/*\nThe web app is deployed separately (e.g. Vercel) — set VITE_API_BASE_URL to this host + ${env.API_PREFIX}.\n`
+    );
+  });
+}
+
 const p = env.API_PREFIX;
 
 app.use(`${p}/auth`, authRouter);
