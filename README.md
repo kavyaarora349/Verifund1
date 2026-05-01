@@ -9,7 +9,8 @@ React UI + Node API for local demo use.
 ```bash
 cd backend
 copy .env.example .env
-# Edit .env: DATABASE_URL, DIRECT_URL, REDIS_URL, JWT_*, etc.
+# Edit .env: DATABASE_URL, DIRECT_URL, JWT_*, etc.
+# If you do not run Redis locally, keep SKIP_REDIS=true (already in .env.example).
 npm install
 npx prisma generate
 npx prisma migrate deploy

@@ -29,7 +29,7 @@ async function shutdown(signal: string): Promise<void> {
     server.close((err) => (err ? reject(err) : resolve()));
   });
   await fraudWorker?.close();
-  await fraudCheckQueue.close();
+  await fraudCheckQueue?.close();
   await redisClient.quit();
   await prisma.$disconnect();
   process.exit(0);

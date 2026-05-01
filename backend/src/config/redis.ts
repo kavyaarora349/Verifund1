@@ -28,10 +28,27 @@ function optionsFromUrl(urlStr: string): RedisOptions {
   };
 }
 
-/** BullMQ + shared commands use the same option bag (separate TCP connections). */
-export const redisConnection: RedisOptions = optionsFromUrl(env.REDIS_URL);
+/** No local Redis: stub client + skip BullMQ (see SKIP_REDIS in `.env`). */
+export const redisDisabled = env.SKIP_REDIS;
 
-export const redisClient = new Redis(redisConnection);
-redisClient.on("error", (err) => {
-  console.error("Redis client error (is Redis running? REDIS_URL correct?)", err.message);
-});
+function stubRedis() {
+  const s = {
+    ping: () => Promise.resolve("PONG"),
+    quit: () => Promise.resolve("OK"),
+    disconnect: () => Promise.resolve(),
+    on: () => s
+  };
+  return s as unknown as InstanceType<typeof Redis>;
+}
+
+export const redisConnection: RedisOptions = redisDisabled
+  ? { host: "127.0.0.1", port: 6379, lazyConnect: true, maxRetriesPerRequest: null }
+  : optionsFromUrl(env.REDIS_URL);
+
+export const redisClient = redisDisabled ? stubRedis() : new Redis(optionsFromUrl(env.REDIS_URL));
+
+if (!redisDisabled) {
+  redisClient.on("error", (err: Error) => {
+    console.error("Redis client error (is Redis running? REDIS_URL correct?)", err.message);
+  });
+}
