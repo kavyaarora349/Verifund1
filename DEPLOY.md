@@ -120,6 +120,24 @@ No trailing slash after `v1` (the client code builds paths like `/auth/login` on
 | Browser “Network error” from Vercel UI | Wrong **`VITE_API_BASE_URL`**, or CORS — set **`SOCKET_CORS_ORIGINS`** / ensure API URL is **https** and matches what you configured. |
 | Very slow first request | Free tier cold start — normal. |
 
+#### Prisma **P3005** — “The database schema is not empty”
+
+This happens when Postgres **already has tables** (for example you used **`prisma db push`** earlier), but the **`_prisma_migrations`** table doesn’t list your migration folders yet. **`migrate deploy`** then refuses to run.
+
+**Fix (one time):** mark existing migrations as already applied (**baseline**), from your PC with the **same** `DATABASE_URL` as production:
+
+```bash
+cd backend
+# Use the same DATABASE_URL (and DIRECT_URL in .env if prisma schema needs it) as Render
+npx prisma migrate resolve --applied "20260501101405_allocation_request_approvals"
+npx prisma migrate resolve --applied "20260501140000_init"
+npx prisma migrate resolve --applied "20260501164000_allocation_request_algo_fields"
+```
+
+Then redeploy on Render. Future deploys will run **`migrate deploy`** and see all migrations as applied (no-op unless you add new ones).
+
+Only do this if the **live schema already matches** these migrations. If the DB is disposable, you can instead empty the database in Supabase and let **`migrate deploy`** run from scratch.
+
 ### 10. After the API works
 
 Point **Vercel** `VITE_API_BASE_URL` at the URL in section 8, redeploy the frontend, then test login from the Vercel URL.
