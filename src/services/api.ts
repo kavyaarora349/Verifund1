@@ -2,16 +2,27 @@ import { Role } from "../types";
 import { useAuthStore } from "../store/authStore";
 
 function resolveApiBase(): string {
-  const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  if (envBase && envBase.trim()) return envBase;
+  const envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (envBase) return envBase.replace(/\/+$/, "");
 
   if (typeof window !== "undefined") {
     const { protocol, hostname } = window.location;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:4000/api/v1";
     }
-    // Same host as the UI (e.g. full-stack on Vercel) — no separate API port.
-    return `${protocol}//${hostname}/api/v1`;
+
+    const fallback = `${protocol}//${hostname}/api/v1`;
+    // UI on Vercel/Netlify + API on Render: requests must use VITE_API_BASE_URL — same-origin /api/v1 does not exist.
+    const staticHost =
+      hostname.endsWith(".vercel.app") ||
+      hostname.endsWith(".netlify.app") ||
+      hostname.endsWith(".cloudflarepages.dev");
+    if (import.meta.env.PROD && staticHost) {
+      console.error(
+        "[VeriFund] Set VITE_API_BASE_URL in your host (e.g. Vercel → Environment Variables) to your API root, e.g. https://YOUR-SERVICE.onrender.com/api/v1 — then Redeploy the frontend."
+      );
+    }
+    return fallback;
   }
 
   return "http://localhost:4000/api/v1";
